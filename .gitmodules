@@ -1,0 +1,3 @@
+[submodule "fs/exfat"]
+	path = fs/exfat
+	url = https://github.com/christianhaitian/exfat-linux
