@@ -38,11 +38,11 @@
 		io-channels = <&saradc 2>;
 	};
 
-/*	vibrator {
+	vibrator {
 		compatible = "rk-vibrator-gpio";
 		vibrator-gpio = <&gpio0 RK_PC4 GPIO_ACTIVE_LOW>;
 		status = "okay";
-	};*/
+	};
 
 	keys: gpio-keys {
 		compatible = "gpio-keys";
