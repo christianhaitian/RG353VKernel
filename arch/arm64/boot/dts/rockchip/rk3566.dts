@@ -1163,11 +1163,11 @@
 
 		battery {
 		   compatible = "rk817,battery";
-		   ocv_table = <3400 3446 3492 3525 3552 3571 3587 
-			     3600 3612 3628 3650 3683 3714 3746
-			     3783 3826 3874 3926 3984 4054 4172>;
-		   design_capacity = <3472>;
-		   design_qmax = <3819>;
+		   ocv_table = <3400 3438 3479 3519 3550 3578 3598
+				3613 3629 3647 3672 3713 3762 3807
+				3852 3895 3939 3990 4035 4092 4172>;
+		   design_capacity = <3151>;
+		   design_qmax = <3465>;
 		   bat_res = <117>;
 		   sleep_enter_current = <300>;
 		   sleep_exit_current = <300>;
