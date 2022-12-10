@@ -363,7 +363,7 @@
 		button-adc-scale = <2>;
 
 		/* adc deadzone range  */
-		button-adc-deadzone = <256>;
+		button-adc-deadzone = <64>;
 
 		/*
 		  specifies fuzz value that is used to filter noise from
