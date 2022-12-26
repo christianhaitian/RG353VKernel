@@ -595,6 +595,10 @@ static void joypad_adc_check(struct input_polled_dev *poll_dev)
 		if (joypad->bt_adc_deadzone) {
 			if (abs(adc->value) < joypad->bt_adc_deadzone)
 				adc->value = 0;
+			elseif (adc->value > joypad->bt_adc_deadzone)
+				adc->value -= joypad->bt_adc_deadzone;
+			elseif (adc->value < joypad->bt_adc_deadzone)
+				adc->value += joypad->bt_adc_deadzone;
 		}
 
 		/* adc data tuning */
