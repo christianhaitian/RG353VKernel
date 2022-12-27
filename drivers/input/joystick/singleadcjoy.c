@@ -593,13 +593,14 @@ static void joypad_adc_check(struct input_polled_dev *poll_dev)
 
 		/* Joystick Deadzone check */
 		if (joypad->bt_adc_deadzone) {
-			if (abs(adc->value) < joypad->bt_adc_deadzone)
-				adc->value = 0;
-			elseif (adc->value > joypad->bt_adc_deadzone)
+			if (adc->value > joypad->bt_adc_deadzone)
 				adc->value -= joypad->bt_adc_deadzone;
-			elseif (adc->value < -joypad->bt_adc_deadzone)
+			else if (adc->value < -joypad->bt_adc_deadzone)
 				adc->value += joypad->bt_adc_deadzone;
+			else adc->value = 0;
 		}
+		
+		adc->value = abs(adc->value) < 16 ? 0 : adc->value;
 
 		/* adc data tuning */
 		if (adc->tuning_n && adc->value < 0)

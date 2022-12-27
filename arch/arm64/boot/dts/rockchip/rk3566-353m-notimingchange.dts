@@ -363,31 +363,31 @@
 		button-adc-scale = <2>;
 
 		/* adc deadzone range  */
-		button-adc-deadzone = <64>;
+		button-adc-deadzone = <48>;
 
 		/*
 		  specifies fuzz value that is used to filter noise from
 		  the event stream.
 		*/
-		button-adc-fuzz = <32>;
-		button-adc-flat = <32>;
+		button-adc-fuzz = <16>;
+		button-adc-flat = <16>;
 
 		/*
 		  Analog Stick data tuning value(precent)
 		  p = positive direction, n = negative direction
 		  report value = (real_adc_data * tuning_value) / 100
 		*/
-		abs_x-p-tuning = <225>;
-		abs_x-n-tuning = <225>;
+		abs_x-p-tuning = <250>;
+		abs_x-n-tuning = <250>;
 
-		abs_y-p-tuning = <225>;
-		abs_y-n-tuning = <225>;
+		abs_y-p-tuning = <250>;
+		abs_y-n-tuning = <250>;
 
-		abs_rx-p-tuning = <225>;
-		abs_rx-n-tuning = <225>;
+		abs_rx-p-tuning = <250>;
+		abs_rx-n-tuning = <250>;
 
-		abs_ry-p-tuning = <225>;
-		abs_ry-n-tuning = <225>;
+		abs_ry-p-tuning = <250>;
+		abs_ry-n-tuning = <250>;
 
 		/* poll device interval (ms), adc read interval */
 		poll-interval = <10>;
