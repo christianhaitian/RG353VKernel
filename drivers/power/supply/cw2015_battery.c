@@ -58,7 +58,7 @@
 #define cw_printk(fmt, arg...)        \
 	({                                    \
 		if(CWFG_ENABLE_LOG){              \
-			printk("FG_CW2015 : %s : " fmt, __FUNCTION__ ,##arg);  \
+			/*printk("FG_CW2015 : %s : " fmt, __FUNCTION__ ,##arg);*/  \
 		}else{}                           \
 	})     //need check by Chaman
 
@@ -446,13 +446,13 @@ static int cw_get_capacity(struct cw_battery *cw_bat)
 	cw_printk( "CW2015[%d]: ui_100 = %d, UI_SOC = %d, remainder = %d\n", __LINE__, ui_100, UI_SOC, remainder);
 	/*case 3 : aviod swing*/
 	if(UI_SOC >= 100){
-		printk( "CW2015[%d]: UI_SOC = %d larger 100!!!!\n", __LINE__, UI_SOC);
+		//printk( "CW2015[%d]: UI_SOC = %d larger 100!!!!\n", __LINE__, UI_SOC);
 		UI_SOC = 100;
 	}else{
 		if((remainder > 70 || remainder < 30) && (UI_SOC >= (cw_bat->capacity - 1)) && (UI_SOC <= (cw_bat->capacity + 1)))
 		{
 			UI_SOC = cw_bat->capacity;
-		printk( "CW2015[%d]: UI_SOC = %d, cw_bat->capacity = %d   charger=%d \n", __LINE__, UI_SOC, cw_bat->capacity,cw2015_get_charge_ac_state);
+		//printk( "CW2015[%d]: UI_SOC = %d, cw_bat->capacity = %d   charger=%d \n", __LINE__, UI_SOC, cw_bat->capacity,cw2015_get_charge_ac_state);
 		}
 	}
 	if(suspend_resume_status==0){
@@ -626,8 +626,8 @@ static void cw_bat_work(struct work_struct *work)
 		cw_update_status(cw_bat);
 	}
 	/*Add for battery swap end*/
-	printk("charger_mod = %d, capacity = %d, voltage = %d\n", cw_bat->charger_mode, cw_bat->capacity,
-	          cw_bat->voltage);
+	/*printk("charger_mod = %d, capacity = %d, voltage = %d\n", cw_bat->charger_mode, cw_bat->capacity,
+	          cw_bat->voltage);*/
 
 	#ifdef CONFIG_PM
 	if(suspend_resume_mark == 1)
