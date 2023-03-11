@@ -15,7 +15,7 @@
 #include "rk3566.dtsi"
 #include "rk3568-linux.dtsi"
 / {
-	model = "Rockchip RK3566 EVB2 LP4X V10 Board";
+	model = "Anbernic RG353V and RG353VS with v1 display at 120HZ";
 	compatible = "rockchip,rk3566-evb2-lp4x-v11", "rockchip,rk3566";
 
 	audiopwmout_diff: audiopwmout-diff {
@@ -672,21 +672,21 @@
 			15 00 02 42 80
 			15 00 02 43 81
 			15 00 02 44 11
-			15 00 02 45 E6
-			15 00 02 46 E5
+			15 00 02 45 F2
+			15 00 02 46 F1
 			15 00 02 47 11
-			15 00 02 48 E8
-			15 00 02 49 E7
+			15 00 02 48 F4
+			15 00 02 49 F3
 			15 00 02 50 02
 			15 00 02 51 01
 			15 00 02 52 04
 			15 00 02 53 03
 			15 00 02 54 11
-			15 00 02 55 EA
-			15 00 02 56 E9
+			15 00 02 55 F6
+			15 00 02 56 F5
 			15 00 02 57 11
-			15 00 02 58 EC
-			15 00 02 59 EB
+			15 00 02 58 F8
+			15 00 02 59 F7
 			15 00 02 7E 02
 			15 00 02 7F 80
 			15 00 02 E0 5A
@@ -758,15 +758,15 @@
 		disp_timings0: display-timings {
 			native-mode = <&dsi0_timing0>;
 			dsi0_timing0: timing0 {
-				clock-frequency = <26400000>;
+				clock-frequency = <50000000>;
 				hactive = <640>;
 				vactive = <480>;
-				hfront-porch = <119>;
+				hfront-porch = <40>;
 				hsync-len = <2>;
-				hback-porch = <119>;
-				vfront-porch = <13>;
+				hback-porch = <80>;
+				vfront-porch = <18>;
 				vsync-len = <2>;
-				vback-porch = <5>;			
+				vback-porch = <28>;			
 				hsync-active = <0>;
 				vsync-active = <0>;
 				de-active = <0>;

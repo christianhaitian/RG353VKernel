@@ -15,7 +15,7 @@
 #include "rk3566.dtsi"
 #include "rk3568-linux.dtsi"
 / {
-	model = "Rockchip RK3566 EVB2 LP4X V10 Board";
+	model = "Anbernic RG353V and RG353VS with v2 display";
 	compatible = "rockchip,rk3566-evb2-lp4x-v11", "rockchip,rk3566";
 
 	audiopwmout_diff: audiopwmout-diff {
@@ -655,7 +655,7 @@
 				hback-porch = <450>;
 				vfront-porch = <17>;
 				vsync-len = <5>;
-				vback-porch = <13>;			
+				vback-porch = <13>;
 				hsync-active = <0>;
 				vsync-active = <0>;
 				de-active = <0>;
