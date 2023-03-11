@@ -15,7 +15,7 @@
 #include "rk3566.dtsi"
 #include "rk3568-linux.dtsi"
 / {
-	model = "Rockchip RK3566 EVB2 LP4X V10 Board";
+	model = "Anbernic RG353M with v1 display at 60HZ";
 	compatible = "rockchip,rk3566-evb2-lp4x-v11", "rockchip,rk3566";
 
 	audiopwmout_diff: audiopwmout-diff {
