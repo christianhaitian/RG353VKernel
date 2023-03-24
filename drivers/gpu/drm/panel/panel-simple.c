@@ -24,6 +24,7 @@
 #include <linux/backlight.h>
 #include <linux/gpio/consumer.h>
 #include <linux/module.h>
+#include <linux/string.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/regulator/consumer.h>
@@ -103,6 +104,11 @@ struct panel_desc {
 
 	struct panel_cmd_seq *init_seq;
 	struct panel_cmd_seq *exit_seq;
+	struct panel_cmd_seq *read_id_seq;
+
+	u8 id[2];
+	int id_reg;
+	int panel_number;
 };
 
 struct panel_simple {
@@ -112,6 +118,8 @@ struct panel_simple {
 	bool enabled;
 	bool power_invert;
 
+	bool panel_found;
+	u8 panel_id[2];
 	const struct panel_desc *desc;
 
 	struct backlight_device *backlight;
@@ -147,8 +155,11 @@ enum rockchip_spi_cmd_type {
 	SPI_4LINE_8BIT_MODE,
 };
 
-static void panel_simple_sleep(unsigned int msec)
+static inline void panel_simple_sleep(unsigned int msec)
 {
+	if (!msec)
+		return;
+	
 	if (msec > 20)
 		msleep(msec);
 	else
@@ -210,6 +221,8 @@ static int panel_simple_parse_cmd_seq(struct device *dev,
 		return -EINVAL;
 
 	seq->cmd_cnt = cnt;
+	if (seq->cmds)
+		devm_kfree(dev, seq->cmds);
 	seq->cmds = devm_kcalloc(dev, cnt, sizeof(*desc), GFP_KERNEL);
 	if (!seq->cmds)
 		return -ENOMEM;
@@ -292,8 +305,7 @@ static int panel_simple_xfer_mcu_cmd_seq(struct panel_simple *panel,
 		value = cmd->payload[0];
 		rockchip_drm_crtc_send_mcu_cmd(panel->base.drm, panel->np_crtc,
 					       cmd->header.data_type, value);
-		if (cmd->header.delay)
-			panel_simple_sleep(cmd->header.delay);
+		panel_simple_sleep(cmd->header.delay);
 	}
 	rockchip_drm_crtc_send_mcu_cmd(panel->base.drm,
 				       panel->np_crtc, MCU_SETBYPASS, 0);
@@ -318,9 +330,7 @@ static int panel_simple_xfer_spi_cmd_seq(struct panel_simple *panel,
 		else
 			value = cmd->payload[0];
 		panel_simple_spi_write_cmd(panel, cmd->header.data_type, value);
-
-		if (cmd->header.delay)
-			panel_simple_sleep(cmd->header.delay);
+		panel_simple_sleep(cmd->header.delay);
 	}
 
 	return 0;
@@ -362,17 +372,46 @@ static int panel_simple_xfer_dsi_cmd_seq(struct panel_simple *panel,
 		if (err < 0)
 			dev_err(dev, "failed to write dcs cmd: %d\n", err);
 
-		if (cmd->header.delay)
-			panel_simple_sleep(cmd->header.delay);
+		panel_simple_sleep(cmd->header.delay);
 	}
 
 	return 0;
+}
+static void panel_simple_dsi_read_panel_id(struct panel_simple *panel)
+{
+	/*
+	 * To support Anbernic's multiple 3.5" display revisions a 
+	 * panel id must be read from the lcd controller. 
+	 * The read id command sequence, and id register were found 
+	 * in Anbernic's updated device trees.
+	 * Both panels use the same register and read id sequence.
+	 * This must be called after a panel reset, and before the 
+	 * init sequence.
+	 */
+	panel_simple_xfer_dsi_cmd_seq(panel, panel->desc->read_id_seq);
+
+	/* up the return packet size to get both bytes of the panel id */
+	mipi_dsi_set_maximum_return_packet_size(panel->dsi, 
+						ARRAY_SIZE(panel->panel_id));
+
+	mipi_dsi_generic_read(panel->dsi, &panel->desc->id_reg, 1, 
+			      panel->panel_id, ARRAY_SIZE(panel->panel_id));
+	/*
+	 * V1 panel id is [30 52]
+	 * V2 panel id is [38 21]
+	 */
+	dev_info(panel->base.dev, "panel id: %02x %02x", 
+		 panel->panel_id[0], panel->panel_id[1]);
 }
 #else
 static inline int panel_simple_xfer_dsi_cmd_seq(struct panel_simple *panel,
 						struct panel_cmd_seq *seq)
 {
 	return -EINVAL;
+}
+static inline void panel_simple_dsi_read_panel_id(struct panel_simple *panel)
+{
+	return;
 }
 #endif
 
@@ -518,8 +557,7 @@ static int panel_simple_disable(struct drm_panel *panel)
 		backlight_update_status(p->backlight);
 	}
 
-	if (p->desc->delay.disable)
-		panel_simple_sleep(p->desc->delay.disable);
+	panel_simple_sleep(p->desc->delay.disable);
 
 	if (p->cmd_type == CMD_TYPE_MCU) {
 		err = panel_simple_xfer_mcu_cmd_seq(p, p->desc->exit_seq);
@@ -541,7 +579,7 @@ static int panel_simple_unprepare(struct drm_panel *panel)
 
 	if (p->desc->exit_seq) {
 		if (p->dsi)
-			panel_simple_xfer_dsi_cmd_seq(p, p->desc->exit_seq);
+			err = panel_simple_xfer_dsi_cmd_seq(p, p->desc->exit_seq);
 		else if (p->cmd_type == CMD_TYPE_SPI)
 			err = panel_simple_xfer_spi_cmd_seq(p, p->desc->exit_seq);
 		if (err)
@@ -554,13 +592,15 @@ static int panel_simple_unprepare(struct drm_panel *panel)
 
 	panel_simple_regulator_disable(p);
 
-	if (p->desc->delay.unprepare)
-		panel_simple_sleep(p->desc->delay.unprepare);
+	panel_simple_sleep(p->desc->delay.unprepare);
 
 	p->prepared = false;
 
 	return 0;
 }
+
+/* declare this here so we can call it from panel_simple_prepare() */
+static void panel_simple_dsi_reload_desc(struct panel_simple *panel);
 
 static int panel_simple_prepare(struct drm_panel *panel)
 {
@@ -569,7 +609,7 @@ static int panel_simple_prepare(struct drm_panel *panel)
 
 	if (p->prepared)
 		return 0;
-//printk("panel_simple_prepare  \n");
+
 	err = panel_simple_regulator_enable(p);
 	if (err < 0) {
 		dev_err(panel->dev, "failed to enable supply: %d\n", err);
@@ -578,22 +618,26 @@ static int panel_simple_prepare(struct drm_panel *panel)
 
 	gpiod_direction_output(p->enable_gpio, 1);
 
-	if (p->desc->delay.prepare)
-		panel_simple_sleep(p->desc->delay.prepare);
-
+	panel_simple_sleep(p->desc->delay.prepare); 
+	
 	gpiod_direction_output(p->reset_gpio, 1);
-
-	if (p->desc->delay.reset)
-		panel_simple_sleep(p->desc->delay.reset);
-
+	
+	panel_simple_sleep(p->desc->delay.reset);
+	
 	gpiod_direction_output(p->reset_gpio, 0);
+	
+	panel_simple_sleep(p->desc->delay.init);
 
-	if (p->desc->delay.init)
-		panel_simple_sleep(p->desc->delay.init);
+	if (p->desc->read_id_seq && !p->panel_found) {
+		if (p->dsi) {
+			panel_simple_dsi_read_panel_id(p);
+			panel_simple_dsi_reload_desc(p);
+		}
+	}
 
 	if (p->desc->init_seq) {
 		if (p->dsi)
-			panel_simple_xfer_dsi_cmd_seq(p, p->desc->init_seq);
+			err = panel_simple_xfer_dsi_cmd_seq(p, p->desc->init_seq);
 		else if (p->cmd_type == CMD_TYPE_SPI)
 			err = panel_simple_xfer_spi_cmd_seq(p, p->desc->init_seq);
 		if (err)
@@ -618,8 +662,7 @@ static int panel_simple_enable(struct drm_panel *panel)
 		if (err)
 			dev_err(panel->dev, "failed to send init cmds seq\n");
 	}
-	if (p->desc->delay.enable)
-		panel_simple_sleep(p->desc->delay.enable);
+	panel_simple_sleep(p->desc->delay.enable);
 
 	if (p->backlight) {
 		p->backlight->props.state &= ~BL_CORE_FBBLANK;
@@ -3078,17 +3121,48 @@ static const struct of_device_id platform_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, platform_of_match);
 
-static int panel_simple_of_get_desc_data(struct device *dev,
-					 struct panel_desc *desc)
+static int panel_simple_of_get_cmd_seq(struct device *dev,
+				       struct device_node *np,
+				       const char *propname,
+				       struct panel_cmd_seq **cmd_seq)
 {
-	struct device_node *np = dev->of_node;
-	struct drm_display_mode *mode;
-	u32 bus_flags;
+	struct panel_cmd_seq *seq = *cmd_seq;
 	const void *data;
 	int len;
 	int err;
 
-	mode = devm_kzalloc(dev, sizeof(*mode), GFP_KERNEL);
+	data = of_get_property(np, propname, &len);
+	if (data) {
+		if (!seq)
+			seq = devm_kzalloc(dev, sizeof(*seq), GFP_KERNEL);
+		if (!seq)
+			return -ENOMEM;
+
+		err = panel_simple_parse_cmd_seq(dev, data, len, seq);
+		if (err) {
+			dev_err(dev, "failed to parse %s\n", propname);
+			return err;
+		}
+
+		*cmd_seq = seq;
+	}
+
+	return 0;
+}
+
+static int panel_simple_of_get_desc_data(struct device *dev,
+					 struct device_node *np,
+					 struct panel_desc *desc)
+{
+	struct drm_display_mode *mode;
+	u32 bus_flags;
+	int err;
+
+	if (desc->modes) 
+		mode = (struct drm_display_mode *)desc->modes;
+	else 
+		mode = devm_kzalloc(dev, sizeof(*mode), GFP_KERNEL);
+	
 	if (!mode)
 		return -ENOMEM;
 
@@ -3111,35 +3185,27 @@ static int panel_simple_of_get_desc_data(struct device *dev,
 	of_property_read_u32(np, "reset-delay-ms", &desc->delay.reset);
 	of_property_read_u32(np, "init-delay-ms", &desc->delay.init);
 
-	data = of_get_property(np, "panel-init-sequence", &len);
-	if (data) {
-		desc->init_seq = devm_kzalloc(dev, sizeof(*desc->init_seq),
-					      GFP_KERNEL);
-		if (!desc->init_seq)
-			return -ENOMEM;
+	err = panel_simple_of_get_cmd_seq(dev, np, "panel-init-sequence", 
+					  &desc->init_seq);
+	if (err)
+		return err;
 
-		err = panel_simple_parse_cmd_seq(dev, data, len,
-						 desc->init_seq);
-		if (err) {
-			dev_err(dev, "failed to parse init sequence\n");
-			return err;
-		}
-	}
+	err = panel_simple_of_get_cmd_seq(dev, np, "panel-exit-sequence", 
+					  &desc->exit_seq);
+	if (err)
+		return err;
+	
+	if (!of_find_property(np, "id", NULL))
+		return 0;
 
-	data = of_get_property(np, "panel-exit-sequence", &len);
-	if (data) {
-		desc->exit_seq = devm_kzalloc(dev, sizeof(*desc->exit_seq),
-					      GFP_KERNEL);
-		if (!desc->exit_seq)
-			return -ENOMEM;
-
-		err = panel_simple_parse_cmd_seq(dev, data, len,
-						 desc->exit_seq);
-		if (err) {
-			dev_err(dev, "failed to parse exit sequence\n");
-			return err;
-		}
-	}
+	of_property_read_u8_array(np, "id", desc->id, ARRAY_SIZE(desc->id));
+	of_property_read_u32(np, "id-reg", &desc->id_reg);
+	of_property_read_u32(np, "num", &desc->panel_number);
+	
+	err = panel_simple_of_get_cmd_seq(dev, np, "panel-read-id-sequence", 
+					  &desc->read_id_seq);
+	if (err)
+		return err;
 
 	return 0;
 }
@@ -3161,7 +3227,7 @@ static int panel_simple_platform_probe(struct platform_device *pdev)
 		if (!d)
 			return -ENOMEM;
 
-		err = panel_simple_of_get_desc_data(dev, d);
+		err = panel_simple_of_get_desc_data(dev, dev->of_node, d);
 		if (err) {
 			dev_err(dev, "failed to get desc data: %d\n", err);
 			return err;
@@ -3372,13 +3438,13 @@ static const struct of_device_id dsi_of_match[] = {
 MODULE_DEVICE_TABLE(of, dsi_of_match);
 
 static int panel_simple_dsi_of_get_desc_data(struct device *dev,
+					     struct device_node *np,
 					     struct panel_desc_dsi *desc)
 {
-	struct device_node *np = dev->of_node;
 	u32 val;
 	int err;
 
-	err = panel_simple_of_get_desc_data(dev, &desc->desc);
+	err = panel_simple_of_get_desc_data(dev, np, &desc->desc);
 	if (err)
 		return err;
 
@@ -3390,6 +3456,41 @@ static int panel_simple_dsi_of_get_desc_data(struct device *dev,
 		desc->lanes = val;
 
 	return 0;
+}
+
+/*
+ * Added to support Anbernic's V2 panel revision.
+ * Once the panel has been identified, we can search the device tree 
+ * and reload the correct panel description.
+ */
+static void panel_simple_dsi_reload_desc(struct panel_simple *panel)
+{
+	const struct device_node *dsi = panel->dsi->host->dev->of_node;
+	struct panel_desc *desc = (struct panel_desc *)panel->desc;
+	struct device *dev = &panel->dsi->dev;
+	struct device_node *np;
+	u8 id[2] = {0, 0};
+
+	if (memcmp(panel->panel_id, id, ARRAY_SIZE(id)) == 0)
+		return;
+
+	if (memcmp(panel->panel_id, desc->id, ARRAY_SIZE(desc->id)) == 0) {
+		panel->panel_found = true;
+		return;
+	}
+	
+	for_each_available_child_of_node(dsi, np) {
+		/* skip nodes without a panel id */
+		if (!of_find_property(np, "id", NULL))
+			continue;
+		
+		of_property_read_u8_array(np, "id", id, ARRAY_SIZE(id));
+
+ 		if (memcmp(panel->panel_id, id, ARRAY_SIZE(id)) == 0) {
+			panel->panel_found = true;
+			panel_simple_of_get_desc_data(dev, np, desc);
+		}
+	}
 }
 
 static int panel_simple_dsi_probe(struct mipi_dsi_device *dsi)
@@ -3410,7 +3511,7 @@ static int panel_simple_dsi_probe(struct mipi_dsi_device *dsi)
 		if (!d)
 			return -ENOMEM;
 
-		err = panel_simple_dsi_of_get_desc_data(dev, d);
+		err = panel_simple_dsi_of_get_desc_data(dev, dev->of_node, d);
 		if (err) {
 			dev_err(dev, "failed to get desc data: %d\n", err);
 			return err;
