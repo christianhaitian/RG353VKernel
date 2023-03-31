@@ -11,9 +11,9 @@
 	};
 };
 
-&cpu0_opp_table {
+/*&cpu0_opp_table {
 	/delete-node/ opp-1992000000;
-};
+};*/
 
 &dmc {
 	system-status-freq = <
