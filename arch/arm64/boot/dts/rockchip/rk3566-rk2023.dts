@@ -15,7 +15,7 @@
 #include "rk3566.dtsi"
 #include "rk3568-linux.dtsi"
 / {
-	model = "Anbernic RG353M with v1 display at 60HZ";
+	model = "Powkiddy RK2023 aka Cheaper Anbernic RG353M";
 	compatible = "rockchip,rk3566-evb2-lp4x-v11", "rockchip,rk3566";
 
 	audiopwmout_diff: audiopwmout-diff {
@@ -318,7 +318,7 @@
 		WIFI,host_wake_irq = <&gpio4 RK_PA1 GPIO_ACTIVE_HIGH>;
 		//WIFI,poweren_gpio = <&gpio0 RK_PA0 GPIO_ACTIVE_HIGH>; /* GPIO0_a3 */
 		keep_wifi_power_on;		
-		status = "okay";
+		status = "disabled";
 	};
 
 	wireless-bluetooth {
@@ -333,7 +333,7 @@
 		BT,reset_gpio    = <&gpio4 RK_PA3 GPIO_ACTIVE_HIGH>;
 		BT,wake_gpio     = <&gpio4 RK_PA4 GPIO_ACTIVE_HIGH>;
 		BT,wake_host_irq = <&gpio4 RK_PA5 GPIO_ACTIVE_HIGH>;
-		status = "okay";
+		status = "disabled";
 	};
 	
 	joypad: singleadc-joypad {
@@ -365,31 +365,31 @@
 		button-adc-scale = <2>;
 
 		/* adc deadzone range  */
-		button-adc-deadzone = <48>;
+		button-adc-deadzone = <64>;
 
 		/*
 		  specifies fuzz value that is used to filter noise from
 		  the event stream.
 		*/
-		button-adc-fuzz = <16>;
-		button-adc-flat = <16>;
+		button-adc-fuzz = <32>;
+		button-adc-flat = <32>;
 
 		/*
 		  Analog Stick data tuning value(precent)
 		  p = positive direction, n = negative direction
 		  report value = (real_adc_data * tuning_value) / 100
 		*/
-		abs_x-p-tuning = <250>;
-		abs_x-n-tuning = <250>;
+		abs_x-p-tuning = <450>;
+		abs_x-n-tuning = <450>;
 
-		abs_y-p-tuning = <250>;
-		abs_y-n-tuning = <250>;
+		abs_y-p-tuning = <450>;
+		abs_y-n-tuning = <450>;
 
-		abs_rx-p-tuning = <250>;
-		abs_rx-n-tuning = <250>;
+		abs_rx-p-tuning = <450>;
+		abs_rx-n-tuning = <450>;
 
-		abs_ry-p-tuning = <250>;
-		abs_ry-n-tuning = <250>;
+		abs_ry-p-tuning = <450>;
+		abs_ry-n-tuning = <450>;
 
 		/* poll device interval (ms), adc read interval */
 		poll-interval = <10>;
