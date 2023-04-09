@@ -378,7 +378,7 @@ static int rockchip_dmcfreq_target(struct device *dev, unsigned long *freq,
 	cpu_cur = raw_smp_processor_id();
 	policy = cpufreq_cpu_get(cpu_cur);
 	if (!policy) {
-		dev_err(dev, "cpu%d policy NULL\n", cpu_cur);
+		//dev_err(dev, "cpu%d policy NULL\n", cpu_cur);
 		goto cpufreq;
 	}
 	down_write(&policy->rwsem);
