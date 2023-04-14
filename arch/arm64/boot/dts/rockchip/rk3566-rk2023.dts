@@ -908,9 +908,9 @@
 	  reg = <0x62>;
 	 };
 
-	vdd_cpu: tcs4525@40 {
+	vdd_cpu: tcs4525@1c {
 		compatible = "tcs,tcs452x";
-		reg = <0x40>;
+		reg = <0x1c>;
 		vin-supply = <&vccsys>;
 		regulator-compatible = "fan53555-reg";
 		regulator-name = "vdd_cpu";
