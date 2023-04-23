@@ -3161,7 +3161,7 @@
 		reset-names = "combphy-apb", "combphy";
 		rockchip,pipe-grf = <&pipegrf>;
 		rockchip,pipe-phy-grf = <&pipe_phy_grf1>;
-		status = "disabled";
+		status = "okay";
 	};
 
 	combphy2_psq: phy@fe840000 {
