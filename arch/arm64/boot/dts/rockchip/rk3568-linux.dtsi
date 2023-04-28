@@ -7,7 +7,7 @@
 / {
 	chosen: chosen {
 		/*bootargs = "earlycon=uart8250,mmio32,0xfe660000 console=ttyFIQ0 root=PARTUUID=614e0000-0000 rw rootwait";*/
-		bootargs = "earlycon=uart8250,mmio32,0xfe660000 console=ttyUSB0,1500000 root=PARTUUID=614e0000-0000 rw rootwait";
+		bootargs = "earlycon=uart8250,mmio32,0xfe660000 console=ttyUSB0,1500000 root=PARTUUID=e139ce78-9841-40fe-8823-96a304a09859 rw rootwait";
 	};
 
 	fiq-debugger {

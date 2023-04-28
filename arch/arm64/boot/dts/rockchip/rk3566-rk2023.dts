@@ -318,7 +318,7 @@
 		WIFI,host_wake_irq = <&gpio4 RK_PA1 GPIO_ACTIVE_HIGH>;
 		//WIFI,poweren_gpio = <&gpio0 RK_PA0 GPIO_ACTIVE_HIGH>; /* GPIO0_a3 */
 		keep_wifi_power_on;		
-		status = "disabled";
+		status = "okay";
 	};
 
 	wireless-bluetooth {
@@ -333,7 +333,7 @@
 		BT,reset_gpio    = <&gpio4 RK_PA3 GPIO_ACTIVE_HIGH>;
 		BT,wake_gpio     = <&gpio4 RK_PA4 GPIO_ACTIVE_HIGH>;
 		BT,wake_host_irq = <&gpio4 RK_PA5 GPIO_ACTIVE_HIGH>;
-		status = "disabled";
+		status = "okay";
 	};
 	
 	joypad: singleadc-joypad {
@@ -1207,7 +1207,6 @@
 			pinctrl-0 = <&i2s1m0_mclk>;
 			hp-volume = <20>;
 			spk-volume = <3>;
-			out-l2spk-r2hp;
 			
 			spk-ctl-gpios = <&gpio4 RK_PC2 GPIO_ACTIVE_HIGH>;
 			status = "okay";
