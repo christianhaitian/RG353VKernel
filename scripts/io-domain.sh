@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 # Copyright (c) 2021 Rockchip Electronics Co., Ltd.
 
+exit 0
+
 PMUIO2=0
 VCCIO1=0
 VCCIO3=0

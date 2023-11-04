@@ -60,8 +60,8 @@ if [ "${ARCH}" == "arm" ]; then
 	ZIMAGE=zImage
 else
 	DTB_PATH=${objtree}/arch/arm64/boot/dts/rockchip/${DTB}
-	KERNEL_ZIMAGE_ARG="--kernel ${objtree}/arch/arm64/boot/Image.lz4"
-	ZIMAGE=Image.lz4
+	KERNEL_ZIMAGE_ARG="--kernel ${objtree}/arch/arm64/boot/Image"
+	ZIMAGE=Image
 fi
 if [ ! -f ${DTB_PATH} ]; then
 	echo "No dtb" >&2
