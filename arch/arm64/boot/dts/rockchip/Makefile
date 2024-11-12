@@ -79,6 +79,7 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3566-evb2-lp4x-v10-eink.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3566-evb2-lp4x-v10-i2s-mic-array.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3566-evb2-lp4x-v10-linux.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3566-rk2023.dtb
+dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3566-rgb20pro.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3566-rgb30.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3566-rgb30-v2.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3566-353v.dtb
