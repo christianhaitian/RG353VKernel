@@ -1662,6 +1662,14 @@ static int rk817_charge_probe(struct platform_device *pdev)
 	rk817_chage_debug(charge);
 	DBG("driver version: %s\n", CHARGE_DRIVER_VERSION);
 
+	/* Force DSOC to 50% to avoid stale data from the mainline driver. */
+	{
+		u32 forced_dsoc = 50000; /* 50% in thousandths */
+		rk817_charge_field_write(charge, SOC_REG0, forced_dsoc & 0xff);
+		rk817_charge_field_write(charge, SOC_REG1, (forced_dsoc >> 8) & 0xff);
+		rk817_charge_field_write(charge, SOC_REG2, (forced_dsoc >> 16) & 0xff);
+	}
+
 	return 0;
 irq_fail:
 	if (charge->pdata->extcon) {
