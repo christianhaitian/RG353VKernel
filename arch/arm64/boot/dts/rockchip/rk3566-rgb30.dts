@@ -345,6 +345,9 @@
 
 		status = "okay";
 
+		/* rumble */
+		pwms = <&pwm5 0 10000 0>;
+
 		/* gpio pincontrol setup */
 		pinctrl-names = "default";
 		pinctrl-0 = <&btn_pins>;
@@ -789,14 +792,15 @@
 	  reg = <0x62>;
 	 };
 
-	vdd_cpu: regulator@1c {
-		compatible = "fcs,fan53555";
+	vdd_cpu: tcs4525@1c {
+		compatible = "tcs,tcs452x";
 		reg = <0x1c>;
 		vin-supply = <&vccsys>;
 		regulator-compatible = "fan53555-reg";
 		regulator-name = "vdd_cpu";
 		regulator-min-microvolt = <712500>;
 		regulator-max-microvolt = <1390000>;
+		regulator-init-microvolt = <900000>;
 		regulator-ramp-delay = <2300>;
 		fcs,suspend-voltage-selector = <1>;
 		regulator-boot-on;
