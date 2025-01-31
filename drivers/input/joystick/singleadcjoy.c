@@ -25,6 +25,7 @@
 #include <linux/of_gpio.h>
 #include <linux/delay.h>
 
+#include <linux/pwm.h> // add by trngaje
 /*----------------------------------------------------------------------------*/
 #define DRV_NAME "retrogame_joypad"
 #define __LEFT_JOYSTICK_INVERT__
@@ -69,6 +70,8 @@ struct bt_gpio {
 	int num;
 	/* report type */
 	int report_type;
+	/* report value by trngaje */
+	int report_value;
 	/* report linux code */
 	int linux_code;
 	/* prev button value */
@@ -78,6 +81,10 @@ struct bt_gpio {
 };
 
 struct joypad {
+	/* add by trngaje */
+	struct input_dev	*input;	/* input device interface */ 
+	struct pwm_device	*pwm;	/* pwm device interface */
+	
 	struct device *dev;
 	int poll_interval;
 
@@ -120,6 +127,7 @@ static unsigned int g_button_adc_fuzz = 0;
 static unsigned int g_button_adc_flat = 0;
 static unsigned int g_button_adc_scale = 0;
 static unsigned int g_button_adc_deadzone = 0;
+
 
 static int button_adc_fuzz(char *str)
 {
@@ -565,10 +573,21 @@ static void joypad_gpio_check(struct input_polled_dev *poll_dev)
 		}
 		value = gpio_get_value(gpio->num);
 		if (value != gpio->old_value) {
-			input_event(poll_dev->input,
-				gpio->report_type,
-				gpio->linux_code,
-				(value == gpio->active_level) ? 1 : 0);
+			if (gpio->report_type != EV_ABS)
+			{
+				input_event(poll_dev->input,
+					gpio->report_type,
+					gpio->linux_code,
+					(value == gpio->active_level) ? 1 : 0);
+				
+			}
+			else	// add by trngaje
+			{
+				input_event(poll_dev->input,
+					gpio->report_type,
+					gpio->linux_code,
+					(value == gpio->active_level) ? gpio->report_value : 0);				
+			}
 			gpio->old_value = value;
 		}
 	}
@@ -902,6 +921,10 @@ static int joypad_gpio_setup(struct device *dev, struct joypad *joypad)
 		if (of_property_read_u32(pp, "linux,input-type",
 				&gpio->report_type))
 			gpio->report_type = EV_KEY;
+
+		// added by trngaje
+		of_property_read_u32(pp, "linux,input-value",
+                                &gpio->report_value);
 	}
 	if (nbtn == 0)
 		return -EINVAL;
@@ -934,6 +957,40 @@ void rk_send_key_f_key_down(void)
 }
 EXPORT_SYMBOL(rk_send_key_f_key_down);
 
+// add for rumble by trnngaje
+static int joypad_play_effect(struct input_dev *dev, void *data, struct ff_effect *effect)
+{
+	struct joypad *joypad = (struct joypad *)data;
+	
+	__u16 strong;
+	__u16 weak;
+
+	int period;
+	struct pwm_state state;
+	struct pwm_args pargs;
+	
+	if (effect->type != FF_RUMBLE)
+		return 0;
+
+	strong = effect->u.rumble.strong_magnitude;
+	weak = effect->u.rumble.weak_magnitude;
+
+	pwm_get_state(joypad->pwm, &state);
+	pwm_get_args(joypad->pwm, &pargs);
+	
+	period = pargs.period;
+	pwm_config(joypad->pwm,  period - (__u16)(strong * period / 0xffff), period);
+	pwm_enable(joypad->pwm);
+
+	return 1;
+}
+
+static int joypad_init_ff(struct joypad *joypad)
+{
+	input_set_capability(joypad->input, EV_FF, FF_RUMBLE);
+
+	return input_ff_create_memless(joypad->input, joypad, joypad_play_effect);
+}
 
 static int joypad_input_setup(struct device *dev, struct joypad *joypad)
 {
@@ -957,7 +1014,8 @@ static int joypad_input_setup(struct device *dev, struct joypad *joypad)
 
 	input = poll_dev->input;
 	joypad_input_g=input;
-
+	joypad->input=input; // add by trngaje
+	
 	device_property_read_string(dev, "joypad-name", &input->name);
 	input->phys = DRV_NAME"/input0";
 
@@ -986,6 +1044,27 @@ static int joypad_input_setup(struct device *dev, struct joypad *joypad)
 			"%s : adc tuning_p = %d, adc_tuning_n = %d\n\n",
 			__func__, adc->tuning_p, adc->tuning_n);
 	}
+
+	for(nbtn = 0; nbtn < joypad->bt_gpio_count; nbtn++) {
+		struct bt_gpio *gpio = &joypad->gpios[nbtn];
+		if (gpio->report_type == EV_ABS && (gpio->linux_code == ABS_HAT0Y || gpio->linux_code == ABS_HAT0X)) {
+			input_set_abs_params(input, ABS_HAT0X, -1, 1, 0, 0);
+			input_set_abs_params(input, ABS_HAT0Y, -1, 1, 0, 0);		
+			break;
+		}
+	}
+	
+	// add for rumble by trngaje
+	joypad->pwm = devm_pwm_get(dev, NULL);
+	if (IS_ERR(joypad->pwm) && PTR_ERR(joypad->pwm) != -EPROBE_DEFER) {
+		dev_err(dev, "unable to request PWM for rumble\n");
+	}
+
+	error = joypad_init_ff(joypad);
+
+	// add for dpad hat by trngaje
+	input_set_abs_params(input, ABS_HAT0X, -1, 1, 0, 0);
+	input_set_abs_params(input, ABS_HAT0Y, -1, 1, 0, 0);
 
 	/* GPIO key setup */
 	__set_bit(EV_KEY, input->evbit);
